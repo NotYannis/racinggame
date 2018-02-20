@@ -1,42 +1,110 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using TouchScript;
+using System;
 
 public class PlayerController : MonoBehaviour {
     public float acceleration;
     public float maxVelocity;
     public float brakeSpeed;
-    private Rigidbody2D rb;
+    public float rollingRotateLinearDrag;
+    public float rollingNormalLinearDrag;
+
+    [System.NonSerialized]
     public DebugMenu debug;
+    [System.NonSerialized]
+    public Rigidbody2D rb;
 
-    float xScreenCenter;
-    GameObject steeringWheel;
-    float steeringWheelBaseRotation;
+    public GameObject steeringWheel;
 
-	// Use this for initialization
-	void Awake () {
+    public Vector2 rotation;
+    PlayerSate currentState;
+
+    // Use this for initialization
+    void Awake () {
         rb = GetComponent<Rigidbody2D>();
-        xScreenCenter = Camera.main.ViewportToScreenPoint(new Vector3(0.5f, 0.0f, 0.0f)).x;
+
         steeringWheel = GameObject.Find("SteeringWheel");
-        steeringWheelBaseRotation = steeringWheel.transform.localEulerAngles.z;
+
         debug = GameObject.Find("DebugCanvas").GetComponent<DebugMenu>();
+        currentState = new RollingState();
     }
 
     // Update is called once per frame
     void FixedUpdate () {
-		if(rb.velocity.sqrMagnitude < maxVelocity)
-        {
-            rb.AddForce(acceleration * transform.TransformDirection(Vector2.right), ForceMode2D.Force);
-        }
-        float rotate = steeringWheel.transform.localEulerAngles.z;
-        debug.SetTargetRotationText(rotate * brakeSpeed);
-        rb.AddTorque(rotate * brakeSpeed);
+        currentState.UpdateState(this);
+
+        HandleDebug();
+    }
+
+    private void HandleDebug()
+    {
         debug.SetSpeedText(rb.velocity.magnitude);
         debug.SetCurrentRotationText(rb.rotation);
     }
 
-    private void LateUpdate()
+    public void BeginRotate()
     {
+        currentState.OnBeginRotate(this);
+    }
+
+    public void Rotate(float rotation)
+    {
+        currentState.OnRotate(this, rotation);
+    }
+
+    public void EndRotate()
+    {
+        currentState.OnEndRotate(this);
+    }
+
+
+}
+
+
+public abstract class PlayerSate
+{
+    public abstract PlayerSate SwitchToState(PlayerController player, PlayerSate nextState);
+    public abstract void UpdateState(PlayerController player); //Acceleration
+    public abstract void EnterState(PlayerController player);
+
+    public abstract void OnBeginRotate(PlayerController player);
+    public abstract void OnRotate(PlayerController player, float rotation);
+    public abstract void OnEndRotate(PlayerController player);
+}
+
+public class RollingState : PlayerSate
+{
+    public override PlayerSate SwitchToState(PlayerController player, PlayerSate nextState)
+    {
+        return null;
+    }
+
+    public override void EnterState(PlayerController player)
+    {
+    }
+
+    public override void UpdateState(PlayerController player)
+    {
+        if (player.rb.velocity.sqrMagnitude < player.maxVelocity)
+        {
+            player.rb.AddForce(player.acceleration * player.transform.right, ForceMode2D.Force);
+        }
+    }
+
+    public override void OnBeginRotate(PlayerController player)
+    {
+        player.rb.drag = player.rollingRotateLinearDrag;
+    }
+
+    public override void OnRotate(PlayerController player, float rotation)
+    {
+        player.steeringWheel.transform.Rotate(new Vector3(0.0f, 0.0f, -rotation));
+        player.transform.Rotate(0.0f, 0.0f, -rotation * player.brakeSpeed);
+    }
+
+    public override void OnEndRotate(PlayerController player)
+    {
+        player.rb.drag = player.rollingNormalLinearDrag;
     }
 }
