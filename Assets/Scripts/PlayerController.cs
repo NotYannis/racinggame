@@ -7,6 +7,10 @@ public class PlayerController : MonoBehaviour {
     public float acceleration;
     public float maxVelocity;
     public float brakeSpeed;
+    public float minBrake;
+    public float maxBrake;
+    public float steering;
+
     public float rollingRotateLinearDrag;
     public float rollingNormalLinearDrag;
 
@@ -19,7 +23,8 @@ public class PlayerController : MonoBehaviour {
 
     public Vector2 rotation;
     PlayerSate currentState;
-
+    public float steeringWheelRotation;
+    float deltaAngle;
     // Use this for initialization
     void Awake () {
         rb = GetComponent<Rigidbody2D>();
@@ -34,7 +39,16 @@ public class PlayerController : MonoBehaviour {
     void FixedUpdate () {
         currentState.UpdateState(this);
 
-        HandleDebug();
+
+        if(transform.rotation.eulerAngles.z > 180.0f)
+        {
+            deltaAngle = Vector2.Angle(rb.velocity, Vector2.left) + 180.0f - transform.rotation.eulerAngles.z;
+        }
+        else
+        {
+            deltaAngle = Vector2.Angle(rb.velocity, Vector2.right) - transform.rotation.eulerAngles.z;
+        }
+        rb.drag = Mathf.Abs(deltaAngle) * steering;
     }
 
     private void HandleDebug()
@@ -94,17 +108,23 @@ public class RollingState : PlayerSate
 
     public override void OnBeginRotate(PlayerController player)
     {
+        player.steeringWheelRotation = 0.0f;
         player.rb.drag = player.rollingRotateLinearDrag;
     }
 
     public override void OnRotate(PlayerController player, float rotation)
     {
+        player.steeringWheelRotation += rotation * player.brakeSpeed;
+        player.steeringWheelRotation = Mathf.Clamp(player.steeringWheelRotation, player.minBrake, player.maxBrake);
+
         player.steeringWheel.transform.Rotate(new Vector3(0.0f, 0.0f, -rotation));
-        player.transform.Rotate(0.0f, 0.0f, -rotation * player.brakeSpeed);
+        player.transform.Rotate(0.0f, 0.0f, -player.steeringWheelRotation);
     }
 
     public override void OnEndRotate(PlayerController player)
     {
+        Debug.Log("STOP");
+        player.steeringWheelRotation = 0.0f;
         player.rb.drag = player.rollingNormalLinearDrag;
     }
 }

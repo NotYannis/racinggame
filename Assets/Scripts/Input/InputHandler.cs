@@ -18,7 +18,7 @@ public class InputHandler : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-        xScreenCenter = Camera.main.ViewportToScreenPoint(new Vector3(0.5f, 0.0f, 0.0f)).x;
+        xScreenCenter = Camera.main.ViewportToScreenPoint(new Vector3(0.7f, 0.0f, 0.0f)).x;
 	}
 	
 	// Update is called once per frame
@@ -34,18 +34,21 @@ public class InputHandler : MonoBehaviour {
     {
         for (int i = 0; i < Input.touchCount; i++)
         {
-            if (Input.GetTouch(i).phase == TouchPhase.Began)
-            {
-                return startSwipe;
-            }
             if (Input.GetTouch(i).position.x < xScreenCenter)
             {
-                swipe.deltaPosition = Input.GetTouch(i).deltaPosition;
-                return swipe;
-            }
-            if(Input.GetTouch(i).phase == TouchPhase.Ended)
-            {
-                return stopSwipe;
+                if (Input.GetTouch(i).phase == TouchPhase.Began)
+                {
+                    return startSwipe;
+                }
+                if (Input.GetTouch(i).phase == TouchPhase.Moved || Input.GetTouch(i).phase == TouchPhase.Stationary)
+                {
+                    swipe.deltaPosition = Input.GetTouch(i).deltaPosition;
+                    return swipe;
+                }
+                if(Input.GetTouch(i).phase == TouchPhase.Ended)
+                {
+                    return stopSwipe;
+                }
             }
         }
 
@@ -53,12 +56,11 @@ public class InputHandler : MonoBehaviour {
         {
             return startSwipe;
         }
-        if (Input.GetButtonUp("HorizontalButton"))
+        else if (Input.GetButtonUp("HorizontalButton"))
         {
             return stopSwipe;
         }
-
-        if (Input.GetAxis("HorizontalAxis") != 0.0f)
+        else if (Input.GetAxis("HorizontalAxis") != 0.0f)
         {
             swipe.deltaPosition.x = Input.GetAxis("HorizontalAxis") * 8;
             return swipe;
